@@ -1,5 +1,4 @@
-﻿using Baoshen.RfidShowRoom.Services;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -8,20 +7,21 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace ResumeBrokenTransfer
 {
+    delegate void ShowProgressDelegate (int totalStep, int currentStep);
     public partial class Form1 : Form
     {
         private Download dl;
-        IAccountService accountService = ServiceProvider.GetService<IAccountService>();
+        //IAccountService accountService = ServiceProvider.GetService<IAccountService>();
         private bool IsPause = false;
         public Form1()
         {
             InitializeComponent();
-            this.urlTextBox.Text = "http://qianqian.baidu.com/download/BaiduMusic-12345630.exe";          
+            this.urlTextBox.Text = "https://www.tutorialspoint.com/cplusplus/cpp_tutorial.pdf";          
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -55,14 +55,57 @@ namespace ResumeBrokenTransfer
                     Directory.CreateDirectory(directory);
                 }
                 dl = new Download(this.urlTextBox.Text.Trim(), directory);
-                dl.step = 102400;
+                dl.step = 204800;
             }
             if (IsPause)
             {
                 IsPause = false;
             }
+
+            Thread startDownload = new Thread(ThreadStart);
+            startDownload.IsBackground = true;
+            startDownload.Start();
         }
-        
+
+        private void ThreadStart()
+        {
+            object[] objs = new object[] { 100, 0 };
+            while (!dl.IsFinished && !IsPause)
+            {
+                dl.download();
+                Thread.Sleep(200);
+                objs[1] = (int)dl.CurrentProgress;
+                this.Invoke(new ShowProgressDelegate(ShowProgress), objs);
+            }
+            Console.WriteLine("done");
+        }
+
+        void ShowProgress(int totalStep, int currentStep)
+        {
+            this.progressBar1.Maximum = totalStep;
+            this.progressBar1.Value = currentStep;
+        }
+
+        private void urlTextBox_TextChanged(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void progressBar1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pause_button(object sender, EventArgs e)
+        {
+            IsPause = true;
+        }
+
+        private void resume_button(object sender, EventArgs e)
+        {     
+            IsPause = false;
+            StartDownload();
+        }
 
     }
 }

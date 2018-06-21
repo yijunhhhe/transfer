@@ -32,7 +32,8 @@
             this.urlLabel = new System.Windows.Forms.Label();
             this.urlTextBox = new System.Windows.Forms.TextBox();
             this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
+            this.pauseButton = new System.Windows.Forms.Button();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.SuspendLayout();
             // 
             // label1
@@ -61,6 +62,7 @@
             this.urlTextBox.Name = "urlTextBox";
             this.urlTextBox.Size = new System.Drawing.Size(280, 21);
             this.urlTextBox.TabIndex = 3;
+            this.urlTextBox.TextChanged += new System.EventHandler(this.urlTextBox_TextChanged);
             // 
             // button1
             // 
@@ -72,21 +74,31 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.download);
             // 
-            // button2
+            // pauseButton
             // 
-            this.button2.Location = new System.Drawing.Point(477, 82);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(75, 23);
-            this.button2.TabIndex = 5;
-            this.button2.Text = "pause";
-            this.button2.UseVisualStyleBackColor = true;
+            this.pauseButton.Location = new System.Drawing.Point(477, 82);
+            this.pauseButton.Name = "pauseButton";
+            this.pauseButton.Size = new System.Drawing.Size(75, 23);
+            this.pauseButton.TabIndex = 5;
+            this.pauseButton.Text = "pause";
+            this.pauseButton.UseVisualStyleBackColor = true;
+            this.pauseButton.Click += new System.EventHandler(this.pause_button);
+            // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(89, 123);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(280, 23);
+            this.progressBar1.TabIndex = 6;
+            this.progressBar1.Click += new System.EventHandler(this.progressBar1_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 396);
-            this.Controls.Add(this.button2);
+            this.Controls.Add(this.progressBar1);
+            this.Controls.Add(this.pauseButton);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.urlTextBox);
             this.Controls.Add(this.urlLabel);
@@ -106,7 +118,8 @@
         private System.Windows.Forms.Label urlLabel;
         private System.Windows.Forms.TextBox urlTextBox;
         private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button pauseButton;
+        private System.Windows.Forms.ProgressBar progressBar1;
     }
 }
 

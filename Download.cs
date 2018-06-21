@@ -15,17 +15,30 @@ namespace ResumeBrokenTransfer
         long totalSize = 0;
         int currentSize;
         bool isFinished;
-        byte[] Buffer;
+        int bufferSize = 1024;
+        private byte[] Buffer
+        {
+            get
+            {
+                if (this.bufferSize <= 0)
+                {
+                    this.bufferSize = 1024;
+                }
+                return new byte[this.bufferSize];
+            }
+        }
         FileStream fs;
-        long step;
+       // long step;
         string url;
         string directory;
         string fileName;
         string filePath;
-        public long Step
+        public bool IsFinished { get; set; }
+        long Step;
+        public long step
         {
-            get { return this.step; }
-            set { this.step = value; }
+            get { return this.Step; }
+            set { this.Step = value; }
         }
 
         public Download(string url, string directory)
@@ -46,31 +59,15 @@ namespace ResumeBrokenTransfer
             this.filePath = fullName;
             this.fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         }
-        
-        public static long GetFileContentLength(string url)
-        {
-            HttpWebRequest request = null;
-            try
-            {
-                request = (HttpWebRequest)WebRequest.Create(url);
-                request.Timeout = TimeOutWait;
-                request.ReadWriteTimeout = ReadWriteTimeOut;
-                WebResponse response = request.GetResponse();
-                request.Abort();
-                return response.ContentLength;
-            }
-            catch (Exception e)
-            {
-                if (request != null)
-                {
-                    request.Abort();
-                }
-                return 0;
 
-            }
+        public void GetTotalSize()
+        {
+            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(this.url);
+            WebResponse response = request.GetResponse();
+            this.totalSize = response.ContentLength;
         }
 
-        public void Download(string url)
+        public void download()
         {
             long from = this.currentSize;
             if (from < 0)
@@ -83,18 +80,18 @@ namespace ResumeBrokenTransfer
             {
                 to = this.totalSize - 1;
             }
-            this.Download(from, to, url);
+            this.startDownload(from, to, this.url);
         }
 
-        public void Download(long from, long to, string url)
+        public void startDownload(long from, long to, string url)
         {
             if (this.totalSize == 0)
             {
-                totalSize = GetFileContentLength(url);
+                GetTotalSize();
             }
             if (from >= this.totalSize || this.currentSize >= this.totalSize)
             {
-                this.isFinished = true;
+                this.IsFinished = true;
                 return;
             }
 
@@ -119,10 +116,29 @@ namespace ResumeBrokenTransfer
 
                     if (response.Headers["Content-Range"] == null)
                     {
-                        this.isFinished = true;
+                        this.IsFinished = true;
                     }
                 }
             }
+        }
+
+
+
+        public float CurrentProgress
+        {
+
+            get
+            {
+                if (this.totalSize != 0)
+                {
+                    return (float)this.currentSize * 100 / (float)this.totalSize;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        
         }
     }
 }
