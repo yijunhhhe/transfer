@@ -12,8 +12,19 @@ namespace ResumeBrokenTransfer
     {
         const int ReadWriteTimeOut = 2 * 1000;//超时等待时间
         const int TimeOutWait = 5 * 1000;//超时等待时间
+        
         long totalSize = 0;
+        public long TotalSize { get { return this.totalSize; }
+            set { this.totalSize = value; }
+        }
+
         int currentSize;
+        public int CurrentSize
+        {
+            get { return this.currentSize; }
+            set { this.currentSize = value; }
+        }
+
         bool isFinished;
         int bufferSize = 1024;
         private byte[] Buffer
@@ -57,6 +68,7 @@ namespace ResumeBrokenTransfer
                 fullName = fullName.Insert(fullName.LastIndexOf('.'), num.ToString());
             }
             this.filePath = fullName;
+            
             this.fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         }
 
@@ -65,6 +77,7 @@ namespace ResumeBrokenTransfer
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(this.url);
             WebResponse response = request.GetResponse();
             this.totalSize = response.ContentLength;
+            response.Dispose();
         }
 
         public void download()
@@ -80,11 +93,12 @@ namespace ResumeBrokenTransfer
             {
                 to = this.totalSize - 1;
             }
-            this.startDownload(from, to, this.url);
+            this.startDownload(from, to);
         }
 
-        public void startDownload(long from, long to, string url)
+        public void startDownload(long from, long to)
         {
+            string url = this.url;
             if (this.totalSize == 0)
             {
                 GetTotalSize();
@@ -94,32 +108,43 @@ namespace ResumeBrokenTransfer
                 this.IsFinished = true;
                 return;
             }
-
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-            request.AddRange("bytes", from, to);
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            string result = string.Empty;
-            if (response != null)
+            try
             {
-                byte[] buffer = this.Buffer;
-                using (Stream stream = response.GetResponseStream())
+                System.Net.ServicePointManager.DefaultConnectionLimit = 200;
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                request.ServicePoint.ConnectionLimit = 100;
+                Console.WriteLine("come");
+                request.AddRange("bytes", from, to);
+                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                string result = string.Empty;
+                if (response != null)
                 {
-                    int readTotalSize = 0;
-                    int size = stream.Read(buffer, 0, buffer.Length);
-                    while (size > 0)
+                    byte[] buffer = this.Buffer;
+                    using (Stream stream = response.GetResponseStream())
                     {
-                        fs.Write(buffer, 0, size);
-                        readTotalSize += size;
-                        size = stream.Read(buffer, 0, buffer.Length);
-                    }
-                    this.currentSize += readTotalSize;
+                        
+                        int readTotalSize = 0;
+                        int size = stream.Read(buffer, 0, buffer.Length);
+                        while (size > 0)
+                        {
+                            fs.Write(buffer, 0, size);
+                            readTotalSize += size;
+                            size = stream.Read(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                        this.currentSize += readTotalSize;
 
-                    if (response.Headers["Content-Range"] == null)
-                    {
-                        this.IsFinished = true;
+                        if (response.Headers["Content-Range"] == null)
+                        {
+                            this.IsFinished = true;
+                        }
                     }
                 }
             }
+            catch (Exception e) { 
+            
+            }
+            
         }
 
 
@@ -140,5 +165,7 @@ namespace ResumeBrokenTransfer
             }
         
         }
+
+        
     }
 }
