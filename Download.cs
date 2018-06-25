@@ -39,11 +39,33 @@ namespace ResumeBrokenTransfer
             }
         }
         FileStream fs;
+        public FileStream Fs
+        {
+            get
+            {
+                return this.fs;
+            }
+            set
+            {
+                this.fs = value;
+            }
+        }
        // long step;
         string url;
         string directory;
         string fileName;
         string filePath;
+        public string FilePath
+        {
+            get
+            {
+                return this.filePath;
+            }
+            set
+            {
+                this.filePath = value;
+            }
+        }
         public bool IsFinished { get; set; }
         long Step;
         public long step
