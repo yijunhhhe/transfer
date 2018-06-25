@@ -135,7 +135,7 @@ namespace ResumeBrokenTransfer
                 System.Net.ServicePointManager.DefaultConnectionLimit = 200;
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.ServicePoint.ConnectionLimit = 100;
-                Console.WriteLine("come");
+               // Console.WriteLine("come");
                 request.AddRange("bytes", from, to);
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
                 string result = string.Empty;

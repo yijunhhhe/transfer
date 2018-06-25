@@ -15,20 +15,25 @@ namespace ResumeBrokenTransfer
 {
     class Tasks
     {
+        Form1 form;
         private Download dl;
         private Download dl2;
         private Download dl3;
         private long totalSize = 0;
         private string url;
+        SynchronizationContext m_SyncContext;
         //IAccountService accountService = ServiceProvider.GetService<IAccountService>();
         private bool IsPause = false;
+        private bool UIStop = false;
 
-        public Tasks(string url)
+        public Tasks(string url, SynchronizationContext m_SyncContext, Form1 form)
         {
             this.url = url;
+            this.m_SyncContext = m_SyncContext;
+            this.form = form;
         }
 
-        
+
 
 
         public void StartDownload()
@@ -44,13 +49,13 @@ namespace ResumeBrokenTransfer
                 dl = new Download(this.url.Trim(), directory);
                 dl2 = new Download(this.url.Trim(), directory);
                 dl3 = new Download(this.url.Trim(), directory);
-                dl.step = 204800;
-                dl2.step = 204800;
-                dl3.step = 204800;
+                dl.step = 102400;
+                dl2.step = 102400;
+                dl3.step = 102400;
             }
             else
             {
-               
+
             }
             if (IsPause)
             {
@@ -61,16 +66,17 @@ namespace ResumeBrokenTransfer
             //backgroundWorker1.RunWorkerAsync();
             var url = this.url.Trim();
             List<Task> tasks = new List<Task>();
+            tasks.Add(Task.Factory.StartNew(() => ThreadStart3()));
             tasks.Add(Task.Factory.StartNew(() => ThreadStart()));
             tasks.Add(Task.Factory.StartNew(() => ThreadStart1()));
             tasks.Add(Task.Factory.StartNew(() => ThreadStart2()));
-
+            Task.WhenAll(tasks).Wait();
             //tasks.Add(Task.Factory.StartNew(() => progressThread()));
-            Task.WhenAll(tasks.ToArray()).Wait();
+           // Task.WaitAll(tasks.ToArray());
 
             var fileName = url.Substring(url.LastIndexOf('/') + 1);
             fileName = fileName.Insert(fileName.LastIndexOf('.'), "final");
-            string fullName = Path.Combine(System.Environment.CurrentDirectory, "Files");      
+            string fullName = Path.Combine(System.Environment.CurrentDirectory, "Files");
             fullName = Path.Combine(fullName, fileName);
             while (File.Exists(fullName))
             {
@@ -99,9 +105,51 @@ namespace ResumeBrokenTransfer
             Console.WriteLine("fuck");
         }
 
+        delegate void SetTextCallback(string text);
+        delegate void ShowProgressDelegate(int step);
+
+        void ShowProgress(int step)
+        {
+            if (this.form.progressBar1.InvokeRequired)
+            {
+                ShowProgressDelegate showProgress = new ShowProgressDelegate(ShowProgress);
+                this.form.BeginInvoke(showProgress, new object[] { step });
+            }
+            else
+            {
+                this.form.progressBar1.Value = step;
+                this.form.progressBar1.Update();
+                this.form.progressBar1.Refresh();
+            }
+            
+        }
+
+        //private void SetTextSafePost(object text)
+        //{
+
+        //    float currentSize = (dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
+        //    ShowProgress((int)currentSize); 
+        //}
+
+        //private void callback(IAsyncResult ar)
+        //{
+        //    Console.WriteLine("Asdf");
+        //    this.form.progressBar1.Value = 20;                                     
+        //}
+
+
+        private void ThreadStart3()
+        {
+            this.form.BeginInvoke(new MethodInvoker(delegate
+            {
+                this.form.progressBar1.Value = 30;
+            }));
+            Console.WriteLine("thrads 1");
+        }
         private void ThreadStart()
         {
-            object[] objs = new object[] { 100, 0 };
+
+            object[] objs = new object[] { 100, 0 };   
             dl.GetTotalSize();
             long totalSize = dl.TotalSize;
             dl.CurrentSize = 0;
@@ -110,14 +158,14 @@ namespace ResumeBrokenTransfer
             {
                 dl.download();
                 Thread.Sleep(200);
-                objs[1] = (int)dl.CurrentProgress;
-
-                //MethodInvoker m = new MethodInvoker(() => {
-                //    this.progressBar1.Maximum = (int)objs[0];
-                //    this.progressBar1.Value = (int)objs[1];
-                //});
-                //this.progressBar1.Invoke(m); 
-                //this.BeginInvoke(new ShowProgressDelegate(ShowProgress1), objs);
+                //ShowProgress((int)dl.CurrentProgress);
+                //this.form.BeginInvoke(new  MethodInvoker(delegate{
+                //     this.form.progressBar1.Value = 30;
+                //}));
+                
+                //SetTextCallback setText = new SetTextCallback(SetTextSafePost);
+                //setText.BeginInvoke("thread3", null, null);
+                
             }
             Console.WriteLine("done1");
 
@@ -163,7 +211,8 @@ namespace ResumeBrokenTransfer
                 //this.BeginInvoke(new ShowProgressDelegate(ShowProgress3), objs);
             }
             Console.WriteLine("done3");
-
         }
+
+
     }
 }
