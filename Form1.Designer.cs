@@ -34,9 +34,8 @@
             this.button1 = new System.Windows.Forms.Button();
             this.pauseButton = new System.Windows.Forms.Button();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
-            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.progressLabel = new System.Windows.Forms.Label();
-            this.resultLabel = new System.Windows.Forms.Label();
+            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.SuspendLayout();
             // 
             // label1
@@ -95,6 +94,16 @@
             this.progressBar1.TabIndex = 6;
             this.progressBar1.Click += new System.EventHandler(this.progressBar1_Click);
             // 
+            // progressLabel
+            // 
+            this.progressLabel.AutoSize = true;
+            this.progressLabel.Location = new System.Drawing.Point(384, 123);
+            this.progressLabel.Name = "progressLabel";
+            this.progressLabel.Size = new System.Drawing.Size(5, 36);
+            this.progressLabel.TabIndex = 7;
+            this.progressLabel.Text = "\r\n\r\n\r\n";
+            this.progressLabel.Click += new System.EventHandler(this.progressLabel_Click);
+            // 
             // backgroundWorker1
             // 
             this.backgroundWorker1.WorkerReportsProgress = true;
@@ -102,31 +111,11 @@
             this.backgroundWorker1.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker1_DoWork);
             this.backgroundWorker1.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.backgroundWorker1_ProgressChanged);
             // 
-            // progressLabel
-            // 
-            this.progressLabel.AutoSize = true;
-            this.progressLabel.Location = new System.Drawing.Point(386, 133);
-            this.progressLabel.Name = "progressLabel";
-            this.progressLabel.Size = new System.Drawing.Size(5, 36);
-            this.progressLabel.TabIndex = 7;
-            this.progressLabel.Text = "\r\n\r\n\r\n";
-            this.progressLabel.Click += new System.EventHandler(this.progressLabel_Click);
-            // 
-            // resultLabel
-            // 
-            this.resultLabel.AutoSize = true;
-            this.resultLabel.Location = new System.Drawing.Point(364, 188);
-            this.resultLabel.Name = "resultLabel";
-            this.resultLabel.Size = new System.Drawing.Size(41, 12);
-            this.resultLabel.TabIndex = 8;
-            this.resultLabel.Text = "label2";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 396);
-            this.Controls.Add(this.resultLabel);
             this.Controls.Add(this.progressLabel);
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.pauseButton);
@@ -150,10 +139,9 @@
         private System.Windows.Forms.TextBox urlTextBox;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button pauseButton;
-        private System.ComponentModel.BackgroundWorker backgroundWorker1;
-        private System.Windows.Forms.Label resultLabel;
         public System.Windows.Forms.Label progressLabel;
         public System.Windows.Forms.ProgressBar progressBar1;
+        public System.ComponentModel.BackgroundWorker backgroundWorker1;
     }
 }
 

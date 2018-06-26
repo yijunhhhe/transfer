@@ -25,12 +25,30 @@ namespace ResumeBrokenTransfer
         SynchronizationContext m_SyncContext = null;
         //IAccountService accountService = ServiceProvider.GetService<IAccountService>();
         private bool IsPause = false;
+        private bool pauseWorker = false;
+        private bool existTask = false;
+        private bool finished = false;
+        public bool Finished
+        {
+            get { return this.finished; }
+            set { this.finished = value; }
+        }
+        public bool ExistTask
+        {
+            get { return this.existTask; }
+            set { this.existTask = value; }
+        }
+        public AutoResetEvent autoEvent = new AutoResetEvent(false);  
+        public bool isPause
+        {
+            get { return this.IsPause; }
+            set { this.IsPause = value; }
+        }
         public Form1()
         {
             InitializeComponent();
             this.urlTextBox.Text = "https://www.tutorialspoint.com/cplusplus/cpp_tutorial.pdf";
             m_SyncContext = SynchronizationContext.Current;
-            //long blockSize = totalSize % 3 == 0 ? totalSize / 3 : totalSize / 3 + 1;
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -49,13 +67,23 @@ namespace ResumeBrokenTransfer
         }
 
         private void download(object sender, EventArgs e)
-        {
-            
+        {  
             //StartDownload();
-            task = new Tasks(urlTextBox.Text, this.m_SyncContext, this);
-            backgroundWorker1.RunWorkerAsync();
-            task.StartDownload();
-           
+            if (!existTask)
+            {
+                
+                task = new Tasks(urlTextBox.Text, this.m_SyncContext, this);
+                existTask = true;
+                task.StartDownload();
+            }
+            else
+            {
+                IsPause = false;
+                autoEvent.Set();
+                autoEvent.Set();
+                autoEvent.Set();
+                autoEvent.Set();
+            }  
         }
 
         void ShowProgress1(int totalStep, int currentStep)
@@ -76,7 +104,12 @@ namespace ResumeBrokenTransfer
 
         private void pause_button(object sender, EventArgs e)
         {
-            IsPause = true;
+            if (existTask)
+            {
+                IsPause = true;
+                pauseWorker = true;              
+            }
+            
         }
 
         private void resume_button(object sender, EventArgs e)
@@ -93,82 +126,45 @@ namespace ResumeBrokenTransfer
         {
 
         }
-
-
-         private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
-        {
-            BackgroundWorker worker = sender as BackgroundWorker;
-
-            for (int i = 1; i <= 10; i++)
-            {
-                if (worker.CancellationPending == true)
-                {
-                    e.Cancel = true;
-                    break;
-                }
-                else
-                {
-                    // Perform a time consuming operation and report progress.
-                    System.Threading.Thread.Sleep(500);
-                    worker.ReportProgress(i * 10);
-                }
-            }
-        }
-
-        // This event handler updates the progress.
-        private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            resultLabel.Text = (e.ProgressPercentage.ToString() + "%");
-            
-        }
-
-        // This event handler deals with the results of the background operation.
-        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            if (e.Cancelled == true)
-            {
-                resultLabel.Text = "Canceled!";
-            }
-            else if (e.Error != null)
-            {
-                resultLabel.Text = "Error: " + e.Error.Message;
-            }
-            else
-            {
-                resultLabel.Text = "Done!";
-            }
-        }
-
+      
         private void progressLabel_Click(object sender, EventArgs e)
         {
 
         }
-    
 
-       
-        //private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
-        //{
-        //    BackgroundWorker worker = sender as BackgroundWorker;
-        //    while ((int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3 != 100.0)
-        //    {
-        //        float currentSize = (dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
-        //        //System.Threading.Thread.Sleep(500);
-        //        worker.ReportProgress((int)currentSize);
-        //       // this.progressBar1.Value = (int)currentSize;
-        //    }
-        //    worker.ReportProgress((int)((dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress)/3));
-        //}
+        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        {
+           
+                //continue process... your code here
+                BackgroundWorker worker = sender as BackgroundWorker;
+                object[] parameters = e.Argument as object[];
+                Download dl = (Download)parameters[0];
+                Download dl2 = (Download)parameters[1];
+                Download dl3 = (Download)parameters[2];
 
-        //private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        //{
-        //    this.progressBar1.Value = e.ProgressPercentage;
-        //    this.progressLabel.Text = (e.ProgressPercentage.ToString() + "%");
-        //}
+                while ((dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3 != 100.0)
+                {
+                    float currentSize = (dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
+                    System.Threading.Thread.Sleep(500);
+                    worker.ReportProgress((int)currentSize);
+                    // this.progressBar1.Value = (int)currentSize;
+                }
+                worker.ReportProgress((int)((dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3));
+            
+        }
 
-        //private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        //{
-        //    this.progressLabel.Text = "done";
-        //}
+  
+        private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            this.progressBar1.Value = e.ProgressPercentage;
+            //this.progressLabel.Text = (e.ProgressPercentage.ToString() + "%");
+        }
+
+
+        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            this.progressLabel.Text = "done";
+        }
 
      }
 }
@@ -188,3 +184,30 @@ namespace ResumeBrokenTransfer
 //startDownload.Join();
 //startDownload1.Join();
 //startDownload2.Join();
+
+
+
+// private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+//{
+//    BackgroundWorker worker = sender as BackgroundWorker;
+
+//    for (int i = 1; i <= 10; i++)
+//    {
+//        if (worker.CancellationPending == true)
+//        {
+//            e.Cancel = true;
+//            break;
+//        }
+//        else
+//        {
+//            // Perform a time consuming operation and report progress.
+//            System.Threading.Thread.Sleep(500);
+//            worker.ReportProgress(i * 10);
+//        }
+//    }
+//}
+
+// This event handler updates the progress.
+
+
+// This event handler deals with the results of the background operation.
