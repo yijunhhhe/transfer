@@ -17,20 +17,16 @@ namespace ResumeBrokenTransfer
     //delegate void ShowProgressDelegate (int totalStep, int currentStep);
     public partial class Form1 : Form
     {
-        private Download dl;
-        private Download dl2;
-        private Download dl3;
         private long totalSize = 0;
         private Tasks task;
-        SynchronizationContext m_SyncContext = null;
-        //IAccountService accountService = ServiceProvider.GetService<IAccountService>();
         private bool IsPause = false;
-        private bool pauseWorker = false;
+        //private bool pauseWorker = false;
         private bool existTask = false;
         private bool finished = false;
+        private int numThreads = 3;
         public bool Finished
         {
-            get { return this.finished; }
+            get { return this.finished; }               
             set { this.finished = value; }
         }
         public bool ExistTask
@@ -38,7 +34,9 @@ namespace ResumeBrokenTransfer
             get { return this.existTask; }
             set { this.existTask = value; }
         }
-        public AutoResetEvent autoEvent = new AutoResetEvent(false);  
+        public AutoResetEvent autoEvent1 = new AutoResetEvent(false);
+        public AutoResetEvent autoEvent2 = new AutoResetEvent(false);
+        public AutoResetEvent autoEvent3 = new AutoResetEvent(false);
         public bool isPause
         {
             get { return this.IsPause; }
@@ -48,7 +46,7 @@ namespace ResumeBrokenTransfer
         {
             InitializeComponent();
             this.urlTextBox.Text = "https://www.tutorialspoint.com/cplusplus/cpp_tutorial.pdf";
-            m_SyncContext = SynchronizationContext.Current;
+            
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -71,18 +69,18 @@ namespace ResumeBrokenTransfer
             //StartDownload();
             if (!existTask)
             {
-                
-                task = new Tasks(urlTextBox.Text, this.m_SyncContext, this);
+                this.progressLabel.Text = "";
+                task = new Tasks(urlTextBox.Text, this, numThreads);
                 existTask = true;
                 task.StartDownload();
             }
             else
             {
                 IsPause = false;
-                autoEvent.Set();
-                autoEvent.Set();
-                autoEvent.Set();
-                autoEvent.Set();
+                autoEvent1.Set();
+                autoEvent2.Set();
+                autoEvent3.Set();
+               
             }  
         }
 
@@ -107,7 +105,7 @@ namespace ResumeBrokenTransfer
             if (existTask)
             {
                 IsPause = true;
-                pauseWorker = true;              
+                //pauseWorker = true;              
             }
             
         }
