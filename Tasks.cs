@@ -16,55 +16,89 @@ namespace ResumeBrokenTransfer
     class Tasks
     {
         Form1 form;
+ 
         private List<Download> dlList = new List<Download>();
-        private Download dl;
-        private Download dl2;
-        private Download dl3;
+        //private Download dl;
+        //private Download dl2;
+        //private Download dl3;
         private long totalSize = 0;
         private string url;
         private int numThreads;
-        
+        private int from = -5000;
+        private int to = -1;
+        public int To
+        {
+            get { return this.to; }
+            set { this.to = value; }
+        }
         //IAccountService accountService = ServiceProvider.GetService<IAccountService>();
         private bool IsPause = false;
         private bool UIStop = false;
-
+        private string fileName;
+        private string fileFullName;
+        private int bufferSize;
+        private byte[] bytes;
+        private FileStream fs;
+        private List<Download> downloads;
+        //private int bytesRead = -1;
+        private int dlIndex = -1;
+        private int downloadEach = 5000;
+        private Object thisLock = new Object();
+        private Object fsLock = new Object();
         public Tasks(string url, Form1 form, int numThreads)
         {
             this.url = url;
-            this.numThreads = numThreads;           
+            this.numThreads = numThreads;
             this.form = form;
+            this.fileName = url.Substring(url.LastIndexOf('/') + 1);
+            this.fileName = fileName.Insert(this.fileName.LastIndexOf('.'), "final");
+            this.fileFullName = Path.Combine(System.Environment.CurrentDirectory, "Files");
+            this.fileFullName = Path.Combine(this.fileFullName, this.fileName);
+            while (File.Exists(this.fileFullName))
+            {
+                this.fileFullName = this.fileFullName.Insert(this.fileFullName.LastIndexOf('.'), 1.ToString());
+            }
+            this.fs = new FileStream(this.fileFullName, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            this.bufferSize = 1024 * 1024;
+            this.bytes = new byte[bufferSize];
+            this.downloads = new List<Download>();
+            TotalSize();
         }
 
+        //create a get total size method to totalSize
+        public void TotalSize()
+        {
+            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(this.url);
+            WebResponse response = request.GetResponse();
+            this.totalSize = response.ContentLength;
+            response.Dispose();
+        }
         public void StartDownload()
         {
 
-            if (dl == null)
+            if (dlList.Count == 0)
             {
                 string directory = System.IO.Path.Combine(System.Environment.CurrentDirectory, "Files");
                 if (!Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
                 }
-                
-                dl = new Download(this.url.Trim(), directory);
-                dl2 = new Download(this.url.Trim(), directory);
-                dl3 = new Download(this.url.Trim(), directory);
-                dl.step = 102400;
-                dl2.step = 102400;
-                dl3.step = 102400;
-            }
-            else
-            {
-
+                for (int i = 0; i < numThreads; i++)
+                {
+                    Download dll = new Download(this.url.Trim(), directory);
+                    dll.step = 102400;
+                    dlList.Add(dll);
+                }
+               
             }
             if (IsPause)
             {
                 IsPause = false;
             }
-            dl.GetTotalSize();
-            this.totalSize = dl.TotalSize;
+            //dl.GetTotalSize();
+            //this.totalSize = dl.TotalSize;
 
-            object[] parameters = new object[] { dl, dl2, dl3 };
+            object[] parameters = new object[] { this, totalSize };
             if (!this.form.backgroundWorker1.IsBusy)
             {
                 this.form.backgroundWorker1.RunWorkerAsync(parameters);
@@ -75,170 +109,196 @@ namespace ResumeBrokenTransfer
         public void Downloading()
         {
             List<Task> tasks = new List<Task>();
-            // tasks.Add(Task.Factory.StartNew(() => ThreadStart3()));
-            tasks.Add(Task.Factory.StartNew(() => ThreadStart()));
-            tasks.Add(Task.Factory.StartNew(() => ThreadStart1()));
-            tasks.Add(Task.Factory.StartNew(() => ThreadStart2()));
+
+            for (int i = 0; i < numThreads; i++)
+            {
+                tasks.Add(Task.Factory.StartNew(() => ThreadStart()));
+            }
+
+            
+
             Task.Factory.ContinueWhenAll(tasks.ToArray(), merge =>
             {
-                var fileName = url.Substring(url.LastIndexOf('/') + 1);
-                fileName = fileName.Insert(fileName.LastIndexOf('.'), "final");
-                string fullName = Path.Combine(System.Environment.CurrentDirectory, "Files");
-                fullName = Path.Combine(fullName, fileName);
-                while (File.Exists(fullName))
-                {
-                    fullName = fullName.Insert(fullName.LastIndexOf('.'), 1.ToString());
-                }
-                FileStream fs = new FileStream(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                var bufferSize = 1024 * 1024;
-                byte[] bytes = new byte[bufferSize];
-                int bytesRead = -1;
-                List<Download> downloads = new List<Download>();
-                downloads.Add(dl);
-                downloads.Add(dl2);
-                downloads.Add(dl3);
-                foreach (var eachDl in downloads)
-                {
-                    var eachFs = eachDl.Fs;
-                    eachFs.Seek(0, SeekOrigin.Begin);
-                    while ((bytesRead = eachFs.Read(bytes, 0, bufferSize)) > 0)
-                    {
-                        fs.Write(bytes, 0, bytesRead);
-                    }
-                    eachFs.Dispose();
-                    File.Delete(eachDl.FilePath);
-                }
                 this.form.Invoke(new MethodInvoker(delegate
                     {
-                    this.form.progressLabel.Text = "done";
-                        }));
+                        this.form.progressLabel.Text = "done";
+                    }));
                 Console.WriteLine("fuck");
                 this.form.ExistTask = false;
             });
-
         }
-      
+
         private void ThreadStart()
         {
-            object[] objs = new object[] { 100, 0 };
-            dl.GetTotalSize();
-            long totalSize = dl.TotalSize;
-            dl.CurrentSize = 0;
-            dl.TotalSize = totalSize % 3 == 0 ? totalSize / 3 : totalSize / 3 + 1;
-            while (!dl.IsFinished)
+            while (to < totalSize)
             {
-                if (this.form.isPause)
+                int newFrom = 0;
+                int newTo = 0;
+                int dlIndexx = 0;
+                lock (thisLock)
                 {
-                    this.form.autoEvent1.WaitOne();
+                    dlIndex++;
+                    if (dlIndex >= dlList.Count)
+                    {
+                        dlIndex = 0;
+                    }
+                    from = from + downloadEach;
+                    to = to + downloadEach;
+                    if (from >= totalSize)
+                    {
+                        return;
+                    }
+                    if (to >= totalSize)
+                    {
+                        to = (int)totalSize - 1;
+                    }
+                    newFrom = from;
+                    newTo = to;
+                    dlIndexx = dlIndex;
                 }
-              
-                    dl.download();
-                    Thread.Sleep(200);
                 
+                dlList[dlIndexx].startDownload(newFrom, newTo);
+                var stream = dlList[dlIndexx].Stream;
+                int bytesRead = -1;
+                lock (fsLock)
+                {
+                    while ((bytesRead = stream.Read(bytes, 0, bufferSize)) > 0)
+                    {
+                        fs.Seek(newFrom, SeekOrigin.Begin);
+                        fs.Write(bytes, 0, bytesRead);
+                    }
+                }   
             }
-            Console.WriteLine( "done1");
         }
 
-        private void ThreadStart1()
-        {
-            object[] objs = new object[] { 100, 0 };
-            dl2.GetTotalSize();
-            long totalSize = dl2.TotalSize;
-            dl2.CurrentSize = (int)(totalSize % 3 == 0 ? totalSize / 3 : totalSize / 3 + 1);
-            dl2.TotalSize = dl2.CurrentSize * 2;
-            while (!dl2.IsFinished)
-            {
-                if (this.form.isPause)
-                {
-                    this.form.autoEvent2.WaitOne();
-                }
-                    dl2.download();
-                    Thread.Sleep(200);
-                 
-            }
-            Console.WriteLine("done2");
 
-        }
-        private void ThreadStart2()
-        {
-            object[] objs = new object[] { 100, 0 };
-            dl3.GetTotalSize();
-            long totalSize = dl3.TotalSize;
-            dl3.CurrentSize = (int)(totalSize % 3 == 0 ? totalSize / 3 : totalSize / 3 + 1) * 2;
-            while (!dl3.IsFinished)
-            {
-                if (this.form.isPause)
-                {
-                    this.form.autoEvent3.WaitOne();
-                }
-               
-                    dl3.download();
-                    Thread.Sleep(200);
-                        
-            }
-            Console.WriteLine("done3");
-        }
 
 
     }
 }
 
+//private void ThreadStart1()
+//{
+//    object[] objs = new object[] { 100, 0 };
+//    dl2.GetTotalSize();
+//    long totalSize = dl2.TotalSize;
+//    dl2.CurrentSize = (int)(totalSize % 3 == 0 ? totalSize / 3 : totalSize / 3 + 1);
+//    dl2.TotalSize = dl2.CurrentSize * 2;
+//    while (!dl2.IsFinished)
+//    {
+//        if (this.form.isPause)
+//        {
+//            this.form.autoEvent2.WaitOne();
+//        }
+//            dl2.download();
+//            Thread.Sleep(200);
+
+//    }
+//    Console.WriteLine("done2");
+
+//}
+//private void ThreadStart2()
+//{
+//    object[] objs = new object[] { 100, 0 };
+//    dl3.GetTotalSize();
+//    long totalSize = dl3.TotalSize;
+//    dl3.CurrentSize = (int)(totalSize % 3 == 0 ? totalSize / 3 : totalSize / 3 + 1) * 2;
+//    while (!dl3.IsFinished)
+//    {
+//        if (this.form.isPause)
+//        {
+//            this.form.autoEvent3.WaitOne();
+//        }
+
+//            dl3.download();
+//            Thread.Sleep(200);
+
+//    }
+//    Console.WriteLine("done3");
+//}
+
+//private void mergeThread()
+//       {
+//           var fileName = url.Substring(url.LastIndexOf('/') + 1);
+//           fileName = fileName.Insert(fileName.LastIndexOf('.'), "final");
+//           string fullName = Path.Combine(System.Environment.CurrentDirectory, "Files");
+//           fullName = Path.Combine(fullName, fileName);
+//           while (File.Exists(fullName))
+//           {
+//               fullName = fullName.Insert(fullName.LastIndexOf('.'), 1.ToString());
+//           }
+//           FileStream fs = new FileStream(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+//           var bufferSize = 1024 * 1024;
+//           byte[] bytes = new byte[bufferSize];
+//           int bytesRead = -1;
+//           List<Download> downloads = new List<Download>();
+//           downloads.Add(dl);
+//           downloads.Add(dl2);
+//           downloads.Add(dl3);
+//           foreach (var eachDl in downloads)
+//           {
+//               var eachFs = eachDl.Fs;
+//               eachFs.Seek(0, SeekOrigin.Begin);
+//               while ((bytesRead = eachFs.Read(bytes, 0, bufferSize)) > 0)
+//               {
+//                   fs.Write(bytes, 0, bytesRead);
+//               }
+//               eachFs.Dispose();
+//               File.Delete(eachDl.FilePath);
+//           }
+
+//           Console.WriteLine("fuck");
+
+//       }
 
 
- //private void mergeThread()
- //       {
- //           var fileName = url.Substring(url.LastIndexOf('/') + 1);
- //           fileName = fileName.Insert(fileName.LastIndexOf('.'), "final");
- //           string fullName = Path.Combine(System.Environment.CurrentDirectory, "Files");
- //           fullName = Path.Combine(fullName, fileName);
- //           while (File.Exists(fullName))
- //           {
- //               fullName = fullName.Insert(fullName.LastIndexOf('.'), 1.ToString());
- //           }
- //           FileStream fs = new FileStream(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite);
- //           var bufferSize = 1024 * 1024;
- //           byte[] bytes = new byte[bufferSize];
- //           int bytesRead = -1;
- //           List<Download> downloads = new List<Download>();
- //           downloads.Add(dl);
- //           downloads.Add(dl2);
- //           downloads.Add(dl3);
- //           foreach (var eachDl in downloads)
- //           {
- //               var eachFs = eachDl.Fs;
- //               eachFs.Seek(0, SeekOrigin.Begin);
- //               while ((bytesRead = eachFs.Read(bytes, 0, bufferSize)) > 0)
- //               {
- //                   fs.Write(bytes, 0, bytesRead);
- //               }
- //               eachFs.Dispose();
- //               File.Delete(eachDl.FilePath);
- //           }
-           
- //           Console.WriteLine("fuck");
-            
- //       }
 
+//private void ThreadStart3()
+//      {
+//          float currentSize = (dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
 
+//          while ((dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3 != 100.0)
+//          {
+//              this.form.Invoke(new MethodInvoker(delegate
+//              {
+//                  this.form.progressBar1.Value = (int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
+//                  //this.form.progressLabel.Text = ((int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3).ToString() + "%";
+//                  Thread.Sleep(500);
+//              }));
+//          }
+//          this.form.Invoke(new MethodInvoker(delegate
+//          {
+//              this.form.progressBar1.Value = (int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
+//              //this.form.progressLabel.Text = ((int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3).ToString();
+//              //Thread.Sleep(500);
+//          }));
+//          Console.WriteLine("thrads 1");
+//      }
 
-  //private void ThreadStart3()
-  //      {
-  //          float currentSize = (dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
-
-  //          while ((dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3 != 100.0)
-  //          {
-  //              this.form.Invoke(new MethodInvoker(delegate
-  //              {
-  //                  this.form.progressBar1.Value = (int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
-  //                  //this.form.progressLabel.Text = ((int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3).ToString() + "%";
-  //                  Thread.Sleep(500);
-  //              }));
-  //          }
-  //          this.form.Invoke(new MethodInvoker(delegate
-  //          {
-  //              this.form.progressBar1.Value = (int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
-  //              //this.form.progressLabel.Text = ((int)(dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3).ToString();
-  //              //Thread.Sleep(500);
-  //          }));
-  //          Console.WriteLine("thrads 1");
-  //      }
+//var fileName = url.Substring(url.LastIndexOf('/') + 1);
+//fileName = fileName.Insert(fileName.LastIndexOf('.'), "final");
+//string fullName = Path.Combine(System.Environment.CurrentDirectory, "Files");
+//fullName = Path.Combine(fullName, fileName);
+//while (File.Exists(fullName))
+//{
+//    fullName = fullName.Insert(fullName.LastIndexOf('.'), 1.ToString());
+//}
+//FileStream fs = new FileStream(fullName, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+//var bufferSize = 1024 * 1024;
+//byte[] bytes = new byte[bufferSize];
+//int bytesRead = -1;
+//List<Download> downloads = new List<Download>();
+////downloads.Add(dl);
+////downloads.Add(dl2);
+////downloads.Add(dl3);
+//foreach (var eachDl in downloads)
+//{
+//    var eachFs = eachDl.Fs;
+//    eachFs.Seek(0, SeekOrigin.Begin);
+//    while ((bytesRead = eachFs.Read(bytes, 0, bufferSize)) > 0)
+//    {
+//        fs.Write(bytes, 0, bytesRead);
+//    }
+//    eachFs.Dispose();
+//    File.Delete(eachDl.FilePath);
+//}

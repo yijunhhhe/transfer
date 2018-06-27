@@ -38,6 +38,12 @@ namespace ResumeBrokenTransfer
                 return new byte[this.bufferSize];
             }
         }
+        Stream stream;
+        public Stream Stream
+        {
+            get { return this.stream; }
+            set { this.stream = value; }
+        }
         FileStream fs;
         public FileStream Fs
         {
@@ -91,7 +97,7 @@ namespace ResumeBrokenTransfer
             }
             this.filePath = fullName;
             
-            this.fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            //this.fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         }
 
         public void GetTotalSize()
@@ -142,25 +148,26 @@ namespace ResumeBrokenTransfer
                 if (response != null)
                 {
                     byte[] buffer = this.Buffer;
-                    using (Stream stream = response.GetResponseStream())
-                    {
+                    this.stream = response.GetResponseStream();
+                    //using (Stream stream = response.GetResponseStream())
+                    //{
                         
-                        int readTotalSize = 0;
-                        int size = stream.Read(buffer, 0, buffer.Length);
-                        while (size > 0)
-                        {
-                            fs.Write(buffer, 0, size);
-                            readTotalSize += size;
-                            size = stream.Read(buffer, 0, buffer.Length);
-                            fs.Flush();
-                        }
-                        this.currentSize += readTotalSize;
+                    //    int readTotalSize = 0;
+                    //    int size = stream.Read(buffer, 0, buffer.Length);
+                    //    while (size > 0)
+                    //    {
+                    //        fs.Write(buffer, 0, size);
+                    //        readTotalSize += size;
+                    //        size = stream.Read(buffer, 0, buffer.Length);
+                    //        fs.Flush();
+                    //    }
+                    //    this.currentSize += readTotalSize;
 
-                        if (response.Headers["Content-Range"] == null)
-                        {
-                            this.IsFinished = true;
-                        }
-                    }
+                    //    if (response.Headers["Content-Range"] == null)
+                    //    {
+                    //        this.IsFinished = true;
+                    //    }
+                    //}
                 }
             }
             catch (Exception e) { 
@@ -173,7 +180,6 @@ namespace ResumeBrokenTransfer
 
         public float CurrentProgress
         {
-
             get
             {
                 if (this.totalSize != 0)

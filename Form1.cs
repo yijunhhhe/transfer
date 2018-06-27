@@ -77,10 +77,7 @@ namespace ResumeBrokenTransfer
             else
             {
                 IsPause = false;
-                autoEvent1.Set();
-                autoEvent2.Set();
-                autoEvent3.Set();
-               
+                autoEvent1.Set();  
             }  
         }
 
@@ -136,32 +133,22 @@ namespace ResumeBrokenTransfer
                 //continue process... your code here
                 BackgroundWorker worker = sender as BackgroundWorker;
                 object[] parameters = e.Argument as object[];
-                Download dl = (Download)parameters[0];
-                Download dl2 = (Download)parameters[1];
-                Download dl3 = (Download)parameters[2];
+                Tasks task = (Tasks)parameters[0];
+                totalSize = (long)parameters[1];
 
-                while ((dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3 != 100.0)
+                while (task.To / (int)totalSize != 100)
                 {
-                    float currentSize = (dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3;
                     System.Threading.Thread.Sleep(500);
-                    worker.ReportProgress((int)currentSize);
+                    worker.ReportProgress((int)(task.To * 100 / (int)totalSize));
                     // this.progressBar1.Value = (int)currentSize;
                 }
-                worker.ReportProgress((int)((dl.CurrentProgress + dl2.CurrentProgress + dl3.CurrentProgress) / 3));
-            
+                  
         }
-
   
         private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             this.progressBar1.Value = e.ProgressPercentage;
             //this.progressLabel.Text = (e.ProgressPercentage.ToString() + "%");
-        }
-
-
-        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            this.progressLabel.Text = "done";
         }
 
      }
