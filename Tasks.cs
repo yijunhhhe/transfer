@@ -16,7 +16,7 @@ namespace ResumeBrokenTransfer
     class Tasks
     {
         Form1 form;
- 
+
         private List<Download> dlList = new List<Download>();
         //private Download dl;
         //private Download dl2;
@@ -24,8 +24,9 @@ namespace ResumeBrokenTransfer
         private long totalSize = 0;
         private string url;
         private int numThreads;
-        private int from = -5000;
+        private int from = -102400;
         private int to = -1;
+        private int downloadEach = 102400;
         public int To
         {
             get { return this.to; }
@@ -42,7 +43,7 @@ namespace ResumeBrokenTransfer
         private List<Download> downloads;
         //private int bytesRead = -1;
         private int dlIndex = -1;
-        private int downloadEach = 5000;
+
         private Object thisLock = new Object();
         private Object fsLock = new Object();
         public Tasks(string url, Form1 form, int numThreads)
@@ -86,14 +87,14 @@ namespace ResumeBrokenTransfer
                 for (int i = 0; i < numThreads; i++)
                 {
                     Download dll = new Download(this.url.Trim(), directory);
-                    dll.step = 102400;
+                   // dll.step = 102400;
                     dlList.Add(dll);
                 }
-               
+
             }
-            if (IsPause)
+            if (this.form.isPause)
             {
-                IsPause = false;
+                this.form.isPause = false;
             }
             //dl.GetTotalSize();
             //this.totalSize = dl.TotalSize;
@@ -115,26 +116,28 @@ namespace ResumeBrokenTransfer
                 tasks.Add(Task.Factory.StartNew(() => ThreadStart()));
             }
 
-            
-
-            Task.Factory.ContinueWhenAll(tasks.ToArray(), merge =>
-            {
-                this.form.Invoke(new MethodInvoker(delegate
-                    {
-                        this.form.progressLabel.Text = "done";
-                    }));
-                Console.WriteLine("fuck");
-                this.form.ExistTask = false;
-            });
+            //Task.Factory.ContinueWhenAll(tasks.ToArray(), merge =>
+            //{
+            //    this.form.mre.Set(); 
+            //    this.form.Invoke(new MethodInvoker(delegate
+            //        {
+            //            this.form.progressLabel.Text = "完成";
+            //        }));
+            //    this.form.backgroundWorker1.CancelAsync();
+            //    this.form.backgroundWorker1.Dispose();
+            //    Console.WriteLine("fuck");
+            //    this.form.ExistTask = false;
+            //});
         }
 
         private void ThreadStart()
         {
-            while (to < totalSize)
+            while (to < totalSize - 1)
             {
                 int newFrom = 0;
                 int newTo = 0;
                 int dlIndexx = 0;
+                int readTotalSize = 0;
                 lock (thisLock)
                 {
                     dlIndex++;
@@ -142,13 +145,14 @@ namespace ResumeBrokenTransfer
                     {
                         dlIndex = 0;
                     }
+
                     from = from + downloadEach;
                     to = to + downloadEach;
                     if (from >= totalSize)
                     {
                         return;
                     }
-                    if (to >= totalSize)
+                    if (to >= totalSize - 1)
                     {
                         to = (int)totalSize - 1;
                     }
@@ -156,18 +160,25 @@ namespace ResumeBrokenTransfer
                     newTo = to;
                     dlIndexx = dlIndex;
                 }
-                
+
                 dlList[dlIndexx].startDownload(newFrom, newTo);
                 var stream = dlList[dlIndexx].Stream;
                 int bytesRead = -1;
+                if (this.form.isPause)
+                {
+                    this.form.mre.WaitOne();
+                }
+                //this.form.mre.Reset();
                 lock (fsLock)
                 {
+                    readTotalSize = 0;
                     while ((bytesRead = stream.Read(bytes, 0, bufferSize)) > 0)
                     {
-                        fs.Seek(newFrom, SeekOrigin.Begin);
+                        fs.Seek(newFrom + readTotalSize, SeekOrigin.Begin);
+                        readTotalSize = readTotalSize + bytesRead;
                         fs.Write(bytes, 0, bytesRead);
                     }
-                }   
+                }
             }
         }
 
