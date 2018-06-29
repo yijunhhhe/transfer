@@ -80,25 +80,7 @@ namespace ResumeBrokenTransfer
             set { this.Step = value; }
         }
 
-        public Download(string url, string directory)
-        {
-            if (string.IsNullOrEmpty(url))
-            {
-                return;
-            }
-            this.url = url;
-            this.directory = directory;
-            this.fileName = url.Substring(url.LastIndexOf('/') + 1);
-            string fullName = Path.Combine(this.directory, fileName);
-            int num = 1;
-            while (File.Exists(fullName))
-            {
-                fullName = fullName.Insert(fullName.LastIndexOf('.'), num.ToString());
-            }
-            this.filePath = fullName;
-            
-            //this.fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-        }
+       
 
         public void GetTotalSize()
         {
@@ -148,26 +130,7 @@ namespace ResumeBrokenTransfer
                 if (response != null)
                 {
                     byte[] buffer = this.Buffer;
-                    this.stream = response.GetResponseStream();
-                    //using (Stream stream = response.GetResponseStream())
-                    //{
-                        
-                    //    int readTotalSize = 0;
-                    //    int size = stream.Read(buffer, 0, buffer.Length);
-                    //    while (size > 0)
-                    //    {
-                    //        fs.Write(buffer, 0, size);
-                    //        readTotalSize += size;
-                    //        size = stream.Read(buffer, 0, buffer.Length);
-                    //        fs.Flush();
-                    //    }
-                    //    this.currentSize += readTotalSize;
-
-                    //    if (response.Headers["Content-Range"] == null)
-                    //    {
-                    //        this.IsFinished = true;
-                    //    }
-                    //}
+                    this.stream = response.GetResponseStream();      
                 }
             }
             catch (Exception e) { 
@@ -197,3 +160,45 @@ namespace ResumeBrokenTransfer
         
     }
 }
+
+
+//public Download(string url, string directory)
+//{
+//    if (string.IsNullOrEmpty(url))
+//    {
+//        return;
+//    }
+//    this.url = url;
+//    this.directory = directory;
+//    this.fileName = url.Substring(url.LastIndexOf('/') + 1);
+//    string fullName = Path.Combine(this.directory, fileName);
+//    int num = 1;
+//    while (File.Exists(fullName))
+//    {
+//        fullName = fullName.Insert(fullName.LastIndexOf('.'), num.ToString());
+//    }
+//    this.filePath = fullName;
+
+//    //this.fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+//}
+
+
+//using (Stream stream = response.GetResponseStream())
+//{
+
+//    int readTotalSize = 0;
+//    int size = stream.Read(buffer, 0, buffer.Length);
+//    while (size > 0)
+//    {
+//        fs.Write(buffer, 0, size);
+//        readTotalSize += size;
+//        size = stream.Read(buffer, 0, buffer.Length);
+//        fs.Flush();
+//    }
+//    this.currentSize += readTotalSize;
+
+//    if (response.Headers["Content-Range"] == null)
+//    {
+//        this.IsFinished = true;
+//    }
+//}

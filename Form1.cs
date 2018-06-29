@@ -23,7 +23,7 @@ namespace ResumeBrokenTransfer
         //private bool pauseWorker = false;
         private bool existTask = false;
         private bool finished = false;
-        private int numThreads = 6;
+        private int numThreads = 30;
         public bool Finished
         {
             get { return this.finished; }               
